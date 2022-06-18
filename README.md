@@ -238,3 +238,101 @@ if __name__ == '__main__':
         args = parser.parse_args()
         deploy_model(args.model)
 ```
+
+## 파이프라인 코드 작성
+
+- 전체 분석을 파이프라인화 하는 코드 작성
+
+```
+import kfp
+from kfp import dsl
+import kfp.onprem as onprem
+import kfp.components as comp
+
+
+def preprocess_op():
+
+    return dsl.ContainerOp(
+        name='Preprocess Data',
+        image='ykkim77/boston_data_preprocessing:DCEE0DDF',
+        command=['python', '/app/preprocess.py'],
+        arguments=[],
+        file_outputs={
+            'x_train': '/app/x_train.npy',
+            'x_test': '/app/x_test.npy',
+            'y_train': '/app/y_train.npy',
+            'y_test': '/app/y_test.npy',
+        }
+    )
+    
+def train_op(x_train, y_train):
+
+    return dsl.ContainerOp(
+        name='Train Model',
+        image='ykkim77/train_model:EA1DC103',
+        command=['python', '/app/train.py'],
+        arguments=[
+            '--x_train', x_train,
+            '--y_train', y_train
+        ],
+        file_outputs={
+            'model': '/app/model.pkl'
+        }
+    )
+
+def test_op(x_test, y_test, model):
+
+    return dsl.ContainerOp(
+        name='Test Model',
+        image='ykkim77/test_model:7DCCD54B',
+        command=['python', '/app/test.py'],
+        arguments=[
+            '--x_test', x_test,
+            '--y_test', y_test,
+            '--model', model
+        ],
+        file_outputs={
+            'mean_squared_error': '/app/output.txt'
+        }
+    )
+
+def deploy_model_op(model):
+
+    return dsl.ContainerOp(
+        name='Deploy Model',
+        image='ykkim77/deploy_model:1C9C44B6',
+        command=['python', '/app/deploy_model.py'],
+        arguments=[
+            '--model', model
+        ]
+    )
+
+
+@dsl.pipeline(
+   name='Boston Housing Pipeline',
+   description='An example pipeline that trains and logs a regression model.'
+)
+def boston_pipeline():
+    _preprocess_op = preprocess_op()
+    
+    _train_op = train_op(
+        dsl.InputArgumentPath(_preprocess_op.outputs['x_train']),
+        dsl.InputArgumentPath(_preprocess_op.outputs['y_train'])
+    ).after(_preprocess_op)
+
+    _test_op = test_op(
+        dsl.InputArgumentPath(_preprocess_op.outputs['x_test']),
+        dsl.InputArgumentPath(_preprocess_op.outputs['y_test']),
+        dsl.InputArgumentPath(_train_op.outputs['model'])
+    ).after(_train_op)
+
+    deploy_model_op(
+        dsl.InputArgumentPath(_train_op.outputs['model'])
+    ).after(_test_op)
+    
+if __name__ == "__main__":
+    import kfp.compiler as compiler
+    
+    kfp.compiler.Compiler().compile(boston_pipeline, 'boston.pipeline.tar.gz')
+
+```
