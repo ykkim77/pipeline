@@ -200,6 +200,7 @@ if __name__ == '__main__':
 
 ```
 # deploy.ipynb
+
 import argparse
 import os
 
@@ -244,6 +245,8 @@ if __name__ == '__main__':
 - 전체 분석을 파이프라인화 하는 코드 작성
 
 ```
+# pipeline.ipynb
+
 import kfp
 from kfp import dsl
 import kfp.onprem as onprem
