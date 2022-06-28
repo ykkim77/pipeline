@@ -1,5 +1,51 @@
 # Boston Data Pipeline으로 분석하기
 
+## notebook 생성
+
+- 다음의 custom image로 노트북을 생성한다.
+
+```
+brightfly/kubeflow-jupyter-lab:tf2.0-gpu
+```
+
+## notebook 에 파이썬 라이브러리 설치
+
+- 다음의 명령어로 notebook 상에 sklearn과 fairing 라이브러리를 설치한다.
+
+```
+pip install kubeflow-fairing sklearn
+```
+
+## notebook 에서 도커 권한 획득  
+
+- 자신의 개인 pc에서 docker login을 하여 docker hub에 로긴을 한 뒤, 
+아래와 같은 명령어로 base64 인코딩된 docker hub id와 pw를 획득한다. (개인 pc에서 실행)
+
+
+```
+echo -n 'username:password' | base64
+```
+
+- 생성한 노트북의 터미널 창에서 위에서 생성한 ID와 비밀번호를 통해 docker hub의 설정 파일인 config.json 파일을 만들어 준다. (생성한 주피터 노트북에서 실행)
+
+```
+# bash
+# mkdir ~/.docker
+# cd ~/.docker
+# cat << EOF > config.json
+{
+  "auths": {
+      "<https://index.docker.io/v1/>": {
+          "auth": "a2FuZ3dvbzpnZWVuYTEx"     ##### echo -n 'username:password' | base64 로 획득한 인코딩 문자
+      }
+  }
+}
+EOF
+```
+
+
+
+
 ## Boston Data 적재, Preprocessing
 
 - sklearn을 이용하여 Boston 데이터를 획득한뒤, 학습데이터와 테스트 데이터를 분할한다.
